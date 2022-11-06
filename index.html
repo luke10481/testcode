@@ -4,16 +4,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <script src="https://cdn.bootcdn.net/ajax/libs/jquery/3.5.1/jquery.js" type="text/javascript"
-            charset="utf-8"></script>
     <title></title>
 </head>
 <body>
 <p id="id1"></p>
 <br>
-<button id="id2" onclick=""></button>
+<img id="id2" onclick="">
 <br>
-<iframe id="id3" src=""></iframe>
+<iframe id="id3" src="" width="200" height="150"></iframe>
 <br>
 <script type="text/javascript">
     var HtmlEncode = function(str){
@@ -24,7 +22,6 @@
             var p = preescape.charAt(i);
             escaped = escaped + escapeCharx(p);
         }
-
         return escaped;
 
         function escapeCharx(original){
@@ -190,6 +187,7 @@
         }
         function GetUrlParam() {
             let url = document.location.toString();
+            url = decodeURIComponent(url);
             let arrObj = url.split("?");
             let params = Object.create(null)
 
@@ -207,9 +205,10 @@
         let value2 = params['key2']
         let value3 = params['key3']
         let value4 = params['key4']
-        $("#id1").text(HtmlEncode(value1));
-        $("#id2").attr("onclick",JavaScriptEncode(value2));
-        $("#id3").attr("src",JavaScriptEncode(value3));
+        document.getElementById("id1").innerHTML=value1;
+        document.getElementById('id2').setAttribute('onclick',JavaScriptEncode(value2))
+        document.getElementById("id2").innerHTML=(value2);
+        document.getElementById('id3').setAttribute('src',JavaScriptEncode(value3))
         eval(JavaScriptEncode(value4))
 </script>
 </body>
