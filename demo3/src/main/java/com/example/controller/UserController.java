@@ -48,8 +48,8 @@ public class UserController {
         return "删除用户完毕";
     }
 
-    @RequestMapping("/selectpage")
-    public List<User> selectPage(Long page,Long size,String order){
+    @RequestMapping("/mybatispluspage")
+    public List<User> mybatispluspage(Long page,Long size,String order){
 
         QueryWrapper<User> qw = new QueryWrapper<>();
         Page<User> personPage = new Page<>(page,size);

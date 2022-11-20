@@ -20,7 +20,4 @@ public interface UserDao extends BaseMapper<User>{
     int updateUser(User user);
     @Delete("delete from user where id=#{id}")
     int deleteUser(int id);
-
-    @Select("select * from user where order by 'username' ase")
-    List<User> selectPage(Long page,Long size,String order);
 }
