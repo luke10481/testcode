@@ -1,0 +1,46 @@
+//        mWebView.evaluateJavascript("javascript:alert()", new ValueCallback<String>() {
+//            @Override
+//            public void onReceiveValue(String s) {
+//                Log.d("LogName", s); // Prints: "this"
+//            }
+//        });
+//        Map<String, String> extraHeaders = new HashMap<>();
+//        mWebView.loadUrl("javascript:alert()", extraHeaders);
+        mWebView.postUrl("javascript:alert()", null);
+
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; ; script-src 'self'">
+    <title></title>
+</head>
+<body>
+<br>
+<button id="id1" onclick="">me</button>
+<br>
+<script type="text/javascript">
+    function GetUrlParam() {
+        let url = document.location.toString();
+        url = decodeURIComponent(url);
+        let arrObj = url.split("?");
+        let params = Object.create(null)
+
+        if (arrObj.length > 1) {
+            arrObj = arrObj[1].replace('#', '&').split('&');
+            arrObj.forEach(item => {
+                item = item.split("=");
+                params[item[0]] = item[1]
+            })
+        }
+        return params;
+    }
+    const params = GetUrlParam()
+    let value1 = params['key1']
+    document.getElementById('id1').setAttribute('onclick',value1)
+</script>
+</body>
+</html>
