@@ -1,0 +1,288 @@
+Django认证与三种方法，此处使用第三种自定义方法
+
+方法一 系统session认证
+
+rest_framework.authentication.SessionAuthenticationajax请求通过认证：cookie中要携带 sessionid、csrftoken，请求头中要携带 x-csrftoken复制代码
+
+方法二 jwt认证
+
+rest_framework_jwt.authentication.JSONWebTokenAuthenticationajax请求通过认证：请求头中要携带 authorization，值为 jwt空格token复制代码
+
+方法三（常用）自定义：基于jwt、其它
+
+1）自定义认证类，继承BaseAuthentication(或其子类)，重写authenticate2）authenticate中完成    拿到认证标识 auth    反解析出用户 user    前两步操作失败 返回None => 游客    前两步操作成功 返回user，auth => 登录用户    注：如果在某个分支抛出异常，直接定义失败 => 非法用户复制代码
+
+装饰器进行判断用户是否有权限访问
+
+中间件MiddlewareMixin判断用户是否有权限访问
+
+1. 登录时实现用户校验认证
+User 的实例对象拥有 is_authenticated() 方法，可以在用户登录时进行认证。如果是真正的 User 对象，返回值为 True，用于检查用户是否已经通过了认证。但是通过认证并不意味着用户认证拥有任何权限，甚至也不会检查该用户是否处于激活状态，这只是表明用户成功的通过了认证。
+
+is_authenticated() 这个方法很重要，在后台用 request.user.is_authenticated() 判断用户是否已经登录，如果 True 则可以向前台展示 request.user.name 用户名，即实现欢迎某某用户登录的业务场景。使用该方法的时候应满足一下要求：用户登录后才能访问某些页面；如果用户没有登录就访问该页面的话直接跳到登录页面；用户在跳转到登录界面中完成登录后，自动跳转到之前访问的 url。
+
+实现模板中校验用户身份
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>auth用户认证</title>
+</head>
+<body>
+{% if user.is_authenticated %}
+<h1> Hello {{user.username}} Login </h1>
+{% else %}
+<h1>Visitor Login</h1>
+{% endif %}
+</body>
+</html>
+
+3. 实现模板中校验用户权限
+我们可以在模板中适应 perms 变量完成权限的校验，perms 变量是 PermWrapper 类的实例，使用它可以校验当前用户是否拥有某些权限。它可以使用如下方式导入：
+from django.contrib.auth.context_processors import PermWrapper
+
+perms 只可以完成两类权限的校验：是否有某个应用的权限，只要当前用户拥有某个应用中的任何一个权限，即为 True。使用方法见下：
+{{ perms.user }}
+
+它的返回值是当前用户被授予的 user 应用的权限，如返回值是None 则表示当前用户没有 index 应用的权限；是否有某一项权限，这里指的是当前用户是否拥有一个确定的权限，如下所示：
+{{perms.user.add_book }}
+
+它的返回值若为 True 则代表当前用户拥有 user 应用中的 add_book 权限。在 Django 模板语言中我们可以使用下列方式来判断用户是否有某项权限：
+{% if "user" in perms %}
+
+校验当前用户是否有 user 应用的权限，假如返回了 True，则代表至少有一个 post 应用的权限。
+{% if "user.add_book" in perms %}
+
+判断当前用户是否有 user 应用的 add_book 权限。下面我们实现一个简单的模板，可以根据登录用户拥有的权限渲染不同的内容。定义 authmodel.html 文件，编写如下代码：
+{% if perms.index %}
+<p> {{ user.username }}拥有 user应用的权限</p>>
+    {% if perms.index.add_book %}
+    <p>你拥有书籍添加的功能</p>
+    {% endif %}
+    {% if perms.index.change_book %}
+    <p>你有用书籍删除的功能</p>
+    {% endif %}
+{% else %}
+<p>关于index应用的权限你一个也没有拥有</p>
+{% endif %}
+从模板中我们可以看出，它首先判断当前用户是否拥有 index 应用的权限，然后再去判断是否有 add_book 和 change_book 的权限。可以将这个模板应用到视图函数中，以此来查看不同登录用户，得到的不同返回结果，注意在这个过程中，要设置不同用户的不同权限配置。
+
+1. Django的权限项
+Django用permission对象存储权限项，每个model默认都有三个permission，即add model, change model和delete model。例如，定义一个名为学生Student模型，当迁移表后，会在auth_permission中自动创建相应的三个permission：add_student, change_student和delete_student。Django还允许自定义permission。
+
+
+
+2. 创建权限
+1） 自定义权限
+
+在自定义模型的Meta元中添加permissions参数，自定义权限的名称（‘codename’，‘name’）即codename为权限名，name为权限的描述。在数据库的auth_permission表中还有一个content_type字段，其表示prmission属于哪个model
+
+from django.db import models
+
+class Users(AbstractUser):
+    """
+    管理员---拓展User表
+    """
+    class Meta:
+        permissions = (
+            ('add_user_per', '添加用户权限'),
+            ('del_user_per', '删除用户权限'),
+            ('change_user_per', '修改用户权限'),
+            ('sel_user_per', '查询用户权限')
+        )
+
+并在settings.py文件中添加如下设置：
+
+AUTH_USER_MODEL = 'users.Users'
+
+注意：在数据库的auth_permission表中，会新增权限，包括自带的对Users管理的权限，和自定义的四个权限。
+
+如下所示：
+
+2）创建权限
+
+上面的方法是在定义模型的时候自定义权限，也可理解为创建系统的内置权限，如果涉及到在业务逻辑中创建权限，则可以通过Permission模型来创建权限
+
+url(r'^add_user_permission/', views.add_user_permission,name='add_user_permission'),
+
+from django.contrib.auth.models import Permission
+from django.contrib.contenttypes.models import ContentType
+from django.http import HttpResponse
+
+from users.models import Users
+
+def add_user_permission(request):
+    if request.method == 'GET':
+        # 获取当前Users模型的id值
+        content_type = ContentType.objects.get_for_model(Users)
+        # codename为权限名，name为描述，content_type为当前权限属于哪一个模型的ID
+        Permission.objects.create(codename='add_other_user_permission',
+                                  name='添加其他用户权限',
+                                  content_type=content_type)
+        return HttpResponse('创建权限成功')
+
+3.分配权限
+1）给用户直接添加某种权限
+
+采用直接分配权限的方法，给用户添加额外的权限既用户表Users和权限Permission模型以及中间表user_permission之间的关联关系。用户Users模型和权限Permission之间是ManyToManyField()多对多关联关系，关联字段为user_permission。
+
+语法:
+
+添加权限：user对象.user_permission.add(permission对象1, permission对象2)
+
+删除权限：user对象.user_permission.remove(permission对象1, permission对象2)
+
+清空权限：user对象.user_permission.clear()
+
+url(r'^add_permission/', views.add_permission, name='add_permission'),
+
+
+from django.contrib.auth.models import Permission, User
+
+def add_permission(request):
+    if request.method == 'GET':
+        # 获取id=1d的用户对象
+        user = Users.objects.get(id=1)
+        # 给该用户添加权限
+        pers = Permission.objects.filter(codename__in=['add_user_per', 'del_user_per'])
+        for per in pers:
+            # 添加用户权限
+            user.user_permissions.add(per)
+            #删除权限
+            # user.user_permissions.remove(per)
+        # 清空权限
+        user.user_permissions.clear()
+        return HttpResponse('创建权限成功')
+
+2）创建组并分配对应组的权限
+
+给组添加权限，涉及到组group表和permission权限表，以及中间关联表。其为ManyToManyFiled()关联关系，关联字段为permissions
+语法:
+
+添加权限：group对象.permissions.add(permission对象1, permission对象2)
+
+删除权限：group对象.permissions.remove(permission对象1, permission对象2)
+
+清空权限：group对象.permissions.clear()
+
+url(r'^group_permission/', views.group_permission, name='group_permission'),
+
+def group_permission(request):
+    if request.method == 'GET':
+        # 创建超级管理用户组并给用户组增加对用户进行CRUD的权限
+        super_group = Group.objects.create(name='超级管理员')
+        pers = Permission.objects.filter(codename__in=['add_user_per', 'del_user_per', 'change_user_per', 'sel_user_per'])
+        for per in pers:
+            # 添加超级用户组的权限
+            super_group.permissions.add(per)
+            # 删除超级组的权限
+            super_group.permissions.remove(per)
+        # 清空组的权限
+        super_group.permissions.clear()
+        return HttpResponse('创建组权限')
+
+3）分配用户和权限组
+
+给用户添加组权限，涉及到组group表和user用户表，以及中间关联表。其为ManyToManyFiled()关联关系，关联字段为groups
+语法:
+
+添加权限：user对象.groups.add(groups对象1, groups对象2)
+
+删除权限：user对象.groups.remove(groups对象1, groups对象2)
+
+清空权限：user对象.groups.clear()
+
+url(r'^user_group/', views.user_group, name='user_group'),
+
+def user_group(request):
+    if request.method == 'GET':
+        # 给id为1的用户分配超级管理员组的权限
+        # 获取超级管理员组group对象
+        super_group = Group.objects.get(name='超级管理员')
+        # 获取id=1d的用户对象
+        user = Users.objects.get(id=1)
+        # 添加超级用户组的权限
+        user.groups.add(super_group)
+        # 删除超级组的权限
+        # user.groups.remove(super_group)
+        # 清空组的权限
+        # user.groups.clear()
+        return HttpResponse('创建用户组权限')
+
+4. 检测用户是否有某权限,和所有权限，组权限
+语法：用户对象.has_perm(‘模型名.权限codename’)
+
+查询用户所有的权限：user.get_all_permissions()方法列出用户的所有权限，返回值是permission name
+
+查询用户的组权限：user.get_group_permissions()方法列出用户所属group的权限，返回值是permission name
+
+def user_permission(request):
+    if request.method == 'GET':
+        # 获取id=1d的用户对象
+        user = Users.objects.get(id=1)
+        # 查看用户的所有权限
+        all_perm = user.get_all_permissions()
+        # 查看用户的组权限
+        group_perm = user.get_group_permissions()
+        # 查询用户是否有add_user_per权限
+        if user.has_perm('users.add_user_per'):
+            return HttpResponse('用户有add_user_per权限')
+        else:
+            return HttpResponse('用户没有add_user_per权限')
+
+5. 权限校验，使用permission_required装饰器
+使用permission_required对权限进行校验，如果没有当前登录系统的用户没有该权限则跳转到登录页面，如果当前用户有该权限，则进行访问对应的视图函数。
+
+语法：@permission_required(‘应用app名.权限名codename’)
+
+url(r'^add_user_html/', views.add_user_html, name='add_user_html'),
+
+from django.contrib.auth.decorators import permission_required
+
+@permission_required('users.add_users')
+def add_user_html(request):
+    if request.method == 'GET':
+        return HttpResponse('该方法需要添加用户权限才可访问')
+
+6. 测试
+定义登录的路由，并实现登录操作，当用户登录后，再次访问add_user_html路由地址，则可以访问到对应的视图函数，如果用户没有登录则因为权限问题访问不了add_user_html路由对应的视图函数。
+
+7. 首页index.html中通过权限控制按钮
+在模版中使用：模版中使用全局变量perms存储当前用户的所有权限。通过{{ perms.应用名 }}可打印出所有的权限。
+
+在模板中也可以直接通过{{ user }}获取当前登录系统的用户信息。
+
+使用语法格式：
+
+{% if perms.应用名.权限标识 %}
+    <!-- 这里是有权限才显示的内容 -->
+{% endif %}
+
+首页index.html中如下控制按钮的权限：
+
+{% extends 'base.html' %}
+
+{% block title %}
+    首页
+{% endblock %}
+
+{% block content %}
+
+    <!--模版中使用全局变量perms存储当前用户的所有权限-->
+    {{ perms.users }}
+    <!--判断当前用户是否为超级管理员-->
+    {{ user.is_superuser }}
+
+    {% if user.is_superuser or perms.users.add_user_per %}
+        <p>添加用户管理</p>
+    {% endif %}
+    {% if user.is_superuser or perms.users.del_user_per %}
+        <p>删除用户管理</p>
+    {% endif %}
+    {% if user.is_superuser or perms.users.change_user_per %}
+        <p>修改用户管理</p>
+    {% endif %}
+    {% if user.is_superuser or perms.users.sel_user_per %}
+        <p>查询用户管理</p>
+    {% endif %}
+{% endblock %}
