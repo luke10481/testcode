@@ -17,3 +17,5 @@
 抓包，filename跨目录，上传dos
 
 用户表，角色表，权限表
+
+base64加解密token
