@@ -12,8 +12,6 @@ public class Demotest {
         try {
             String xmlFile = "C:\\Users\\luke10481\\IdeaProjects\\sql注入靶场\\src\\main\\resources\\static\\Data.xml";
             XMLInputFactory xmlInputFactory = XMLInputFactory.newFactory();
-
-            // Enable DTD support and external entity resolution
             xmlInputFactory.setProperty(XMLInputFactory.IS_SUPPORTING_EXTERNAL_ENTITIES, true);
             xmlInputFactory.setProperty(XMLInputFactory.SUPPORT_DTD, true);
 
@@ -22,16 +20,10 @@ public class Demotest {
                 int eventType = xmlReader.next();
 
                 if (eventType == XMLStreamConstants.START_ELEMENT) {
-                    if ("Girl".equals(xmlReader.getLocalName())) {
-                        String name = xmlReader.getAttributeValue(null, "name");
-                        String age = xmlReader.getAttributeValue(null, "age");
-                        System.out.println("a neme called " + name + "girl， age is" + age);
-                    }
-                } else if (eventType == XMLStreamConstants.CHARACTERS) {
-                    // Print the text content of the "Girl" element
-                    String text = xmlReader.getText().trim();
-                    if (!text.isEmpty()) {
-                        System.out.println("Text content: " + text);
+                    if ("id".equals(xmlReader.getLocalName())) {
+                        xmlReader.next(); // Move to the text content of the "id" element
+                        String idContent = xmlReader.getText();
+                        System.out.println("id: " + idContent);
                     }
                 }
             }
