@@ -11,22 +11,23 @@ public class Demotest {
     public static void main(String[] args) {
         try {
             String xmlFile = "C:\\Users\\luke10481\\IdeaProjects\\sql注入靶场\\src\\main\\resources\\static\\Data.xml";
-            XMLInputFactory xmlInputFactory = XMLInputFactory.newFactory();
-            xmlInputFactory.setProperty(XMLInputFactory.IS_SUPPORTING_EXTERNAL_ENTITIES, true);
-            xmlInputFactory.setProperty(XMLInputFactory.SUPPORT_DTD, true);
+            // Intentionally make the XMLInputFactory vulnerable to XXE
+            XMLInputFactory factory = XMLInputFactory.newFactory();
+            factory.setProperty(XMLInputFactory.SUPPORT_DTD, true);
+            factory.setProperty(XMLInputFactory.IS_SUPPORTING_EXTERNAL_ENTITIES, true);
 
-            XMLStreamReader xmlReader = xmlInputFactory.createXMLStreamReader(new FileInputStream(xmlFile));
-            while (xmlReader.hasNext()) {
-                int eventType = xmlReader.next();
+            XMLStreamReader reader = factory.createXMLStreamReader(new FileInputStream(xmlFile));
 
-                if (eventType == XMLStreamConstants.START_ELEMENT) {
-                    if ("id".equals(xmlReader.getLocalName())) {
-                        xmlReader.next(); // Move to the text content of the "id" element
-                        String idContent = xmlReader.getText();
-                        System.out.println("id: " + idContent);
-                    }
+            while (reader.hasNext()) {
+                int eventType = reader.next();
+
+                if (eventType == XMLStreamConstants.START_ELEMENT && "content".equals(reader.getLocalName())) {
+                    String content = reader.getElementText();
+                    System.out.println("Extracted content: \n" + content);
                 }
             }
+
+            reader.close();
         }catch (Exception e){
             System.out.println(e);
         }

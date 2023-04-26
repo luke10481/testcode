@@ -13,7 +13,7 @@ import java.io.IOException;
 public class Demotest5 {
     public static void main(String[] args) {
         try {
-            String xmlFile = "C:\\Users\\luke10481\\IdeaProjects\\sql注入靶场\\src\\main\\resources\\static\\Data3.xml";
+            String xmlFile = "C:\\Users\\luke10481\\IdeaProjects\\sql注入靶场\\src\\main\\resources\\static\\Data.xml";
             SAXParserFactory factory = SAXParserFactory.newInstance();
             factory.setFeature("http://xml.org/sax/features/external-general-entities", true);
             factory.setFeature("http://xml.org/sax/features/external-parameter-entities", true);
@@ -24,7 +24,7 @@ public class Demotest5 {
 
                 @Override
                 public void startElement(String uri, String localName, String qName, Attributes attributes) throws SAXException {
-                    if ("id".equalsIgnoreCase(qName)) {
+                    if ("content".equalsIgnoreCase(qName)) {
                         idElement = true;
                     }
                 }

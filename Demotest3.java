@@ -12,12 +12,12 @@ public class Demotest3 {
 
     public static void main(String[] args) {
         try {
-            String xmlFile = "C:\\Users\\luke10481\\IdeaProjects\\sql注入靶场\\src\\main\\resources\\static\\Data2.xml";
+            String xmlFile = "C:\\Users\\luke10481\\IdeaProjects\\sql注入靶场\\src\\main\\resources\\static\\Data.xml";
             Digester digester = new Digester();
             digester.setValidating(false);
 
             StringBuilder idBuilder = new StringBuilder();
-            digester.addRule("school/student/id", new Rule() {
+            digester.addRule("data/content", new Rule() {
                 @Override
                 public void body(String namespace, String name, String text) throws SAXException {
                     idBuilder.append(text);
