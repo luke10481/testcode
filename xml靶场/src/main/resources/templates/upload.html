@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>File Upload</title>
+</head>
+<body>
+<h1>Upload a file</h1>
+<form method="POST" enctype="multipart/form-data" action="/upload">
+    <input type="file" name="file">
+    <button type="submit">Upload</button>
+</form>
+<h2 th:if="${message}">[[${message}]]</h2>
+<pre th:if="${parsedContent}">[[${parsedContent}]]</pre>
+</body>
+</html>
