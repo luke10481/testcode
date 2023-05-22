@@ -9,9 +9,9 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 public class DemoApplication {
 
 	public static void main(String[] args) {
-		Configuration cfg = new Configuration();
-		cfg.setAPIBuiltinEnabled(true);	// 開啟api
-		cfg.setNewBuiltinClassResolver(TemplateClassResolver.UNRESTRICTED_RESOLVER);
+		//Configuration cfg = new Configuration();
+		//cfg.setAPIBuiltinEnabled(true);	// 開啟api
+		//cfg.setNewBuiltinClassResolver(TemplateClassResolver.UNRESTRICTED_RESOLVER);
 		SpringApplication.run(DemoApplication.class, args);
 	}
 }
