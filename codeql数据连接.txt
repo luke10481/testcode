@@ -1,0 +1,13 @@
+predicate isAdditionalFlowStep(DataFlow::Node node1, DataFlow::Node node2 ) {
+    exists(API::CallNode callNode, Function func | 
+      callNode = API::moduleImport("threading").getMember("Thread").getACall()
+      and
+      not callNode.getScope().getLocation().getFile().inStdlib()
+      and 
+      node1.asExpr() = callNode.getParameter(3, "args").asSink().asCfgNode().getNode().(Tuple).getElts().getAnItem().getASubExpression()
+      and
+      callNode.getParameter(1, "target").asSink().asCfgNode().getNode().toString() = func.getName()
+      and
+      node2.asExpr() = func.getArgs().getAnItem()
+    )
+  }
