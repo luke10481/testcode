@@ -117,3 +117,23 @@ private predicate capturedJumpStep(Node nodeFrom, Node nodeTo) {
     or
     any(AdditionalCapturedJumpStep s).othercapturedjumpstep(nodeFrom, nodeTo)
   }
+
+
+predicate test(Node node1, Node node2) {
+  exists(int n, int i, API::CallNode callNode, Function func | 
+    callNode = API::moduleImport("threading").getMember("Thread").getACall()
+    and
+    not callNode.getScope().getLocation().getFile().inStdlib()
+    and 
+    n = callNode.getParameter(3, "args").asSink().asCfgNode().(TupleObject).getLength()
+    and
+    i in [0 .. n]
+    and
+    node1.asExpr() = callNode.getParameter(3, "args").asSink().asCfgNode().getNode().(Tuple).getElts().getItem(i)
+    and
+    callNode.getParameter(1, "target").asSink().asCfgNode().getNode().toString() = func.getName()
+    and
+    node2.asExpr() = func.getArgs().getItem(i)
+    
+  )
+}
