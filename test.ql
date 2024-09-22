@@ -20,7 +20,7 @@ Node getClassNode() {
 
 predicate test(Function routeFunc) {
     exists(Node noAuthClassNode|
-        routeFunc.getADecorator() = getRouteNode().asExpr() 
+        routeFunc.getADecorator() = getNoAuthClassNode().asExpr() 
         and not exists(Function authFunc |
             authFunc.getADecorator().(Attribute).getName() = "login_required"
             |routeFunc = authFunc
@@ -29,7 +29,7 @@ predicate test(Function routeFunc) {
 }
 
 Node getNoAuthClassNode() {
-    exists(Node noAuthClassNode|
+    exists(Node noAuthClassNode, API::Node flaskNode|
         noAuthClassNode = getClassNode()
         and not exists( Function globalFunc, Node globalNode|
             globalFunc.getADecorator().(Attribute).getName() = "before_request"
@@ -37,7 +37,15 @@ Node getNoAuthClassNode() {
             and globalFunc.getADecorator().(Attribute).getObject() = globalNode.asExpr()
             and noAuthClassNode.getALocalSource().flowsTo(globalNode)
         )
-        | result = noAuthClassNode
+        | 
+        flaskNode = [
+            Flask::FlaskApp::instance(),
+            Flask::Blueprint::instance()
+        ]
+        and flaskNode.asSource() = noAuthClassNode
+        and result = [
+            flaskNode.getMember("route").getACall()
+        ]
     )
 }
 
