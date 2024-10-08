@@ -1,0 +1,15 @@
+predicate test3(DataFlow::Node node1, DataFlow::Node node2) {
+  exists(int n, int i, API::CallNode callNode, Function func, KeyValuePair kvp, DataFlow::Node kwargsNode, Dict kwargsDict| 
+    callNode = API::moduleImport("multiprocessing").getMember("Process").getACall()
+    and not func.getScope().getLocation().getFile().inStdlib()
+    and callNode.getParameter(1, "target").asSink().asCfgNode().getNode().toString() = func.getName()
+    and kwargsNode = callNode.getParameter(4, "kwargs").asSink()
+    and kwargsNode.getALocalSource().asExpr() = kwargsDict
+    and kvp = kwargsDict.getAnItem()
+    and n = count(kvp)
+    and i in [0 .. n]
+    and func.getArgs().getItem(i).getName() = kvp.getKey().(StringLiteral).getText()
+    and node1.asExpr() = kvp.getValue()
+    and node2.asExpr() = func.getArgs().getItem(i)
+  )
+}
