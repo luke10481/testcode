@@ -1,62 +1,76 @@
 import python
-import semmle.python.security.dataflow.SqlInjectionQuery
+import semmle.python.ApiGraphs
 import semmle.python.frameworks.Flask
-import SqlInjectionFlow::PathGraph
-private import semmle.python.dataflow.new.internal.DataFlowPublic as DataFlowPublic
-class Node = DataFlowPublic::Node;
 
-Node getRouteNode() {
-    result = [
-        Flask::FlaskApp::instance().getMember("route").getACall(),
-        Flask::Blueprint::instance().getMember("route").getACall()
-    ]
-}
 
-Node getClassNode() {
-    result = [
-        Flask::FlaskApp::classRef().getACall(),
-    ]
-}
-
-predicate test(Function routeFunc) {
-    exists(Node noAuthClassNode|
-        routeFunc.getADecorator() = getNoAuthClassNode().asExpr() 
-        and not exists(Function authFunc |
-            authFunc.getADecorator().(Attribute).getName() = "login_required"
-            |routeFunc = authFunc
-        )
+DataFlow::Node getGlobalNode(string decorator){
+    exists(Function globalFunc, DataFlow::Node globalNode|
+        globalFunc.getADecorator().(Attribute).getName() = decorator
+        and globalFunc.getName().toLowerCase().matches("%soa%")
+        and globalFunc.getADecorator().(Attribute).getObject() = globalNode.asExpr()
+        |result = globalNode
     )
 }
 
-Node getNoAuthClassNode() {
-    exists(Node noAuthClassNode, API::Node flaskNode|
-        noAuthClassNode = getClassNode()
-        and not exists( Function globalFunc, Node globalNode|
-            globalFunc.getADecorator().(Attribute).getName() = "before_request"
-            and globalFunc.getName().toLowerCase().matches("%soa%")
-            and globalFunc.getADecorator().(Attribute).getObject() = globalNode.asExpr()
-            and noAuthClassNode.getALocalSource().flowsTo(globalNode)
-        )
-        | 
-        flaskNode = [
-            Flask::FlaskApp::instance(),
-            Flask::Blueprint::instance()
-        ]
-        and flaskNode.asSource() = noAuthClassNode
-        and result = [
-            flaskNode.getMember("route").getACall()
-        ]
+module BlueprintGlobalRegisterConfiguration implements DataFlow::ConfigSig {
+    predicate isSource(DataFlow::Node source) {
+        source = getGlobalNode("before_app_request")
+    }
+  
+    predicate isSink(DataFlow::Node sink) {
+        sink = Flask::FlaskApp::classRef().getReturn().getMember("register_blueprint").getACall().getParameter(0, "blueprint").asSink()
+    }
+}
+module BlueprintGlobalRegisterFlow = DataFlow::Global<BlueprintGlobalRegisterConfiguration>;
+
+module BlueprintRegisterConfiguration implements DataFlow::ConfigSig {
+    predicate isSource(DataFlow::Node source) {
+        source = Flask::Blueprint::classRef().getReturn().asSource()
+    }
+  
+    predicate isSink(DataFlow::Node sink) {
+        sink = Flask::FlaskApp::classRef().getReturn().getMember("register_blueprint").getACall().getParameter(0, "blueprint").asSink()
+    }
+}
+module BlueprintRegisterFlow = DataFlow::Global<BlueprintRegisterConfiguration>;
+
+module BlueprintPartConfiguration implements DataFlow::ConfigSig {
+    predicate isSource(DataFlow::Node source) {
+        source = Flask::Blueprint::classRef().getReturn().asSource()
+    }
+  
+    predicate isSink(DataFlow::Node sink) {
+        sink = getGlobalNode("before_request")
+    }
+}
+module BlueprintPartFlow = DataFlow::Global<BlueprintPartConfiguration>;
+
+module FlaskGlobalConfiguration implements DataFlow::ConfigSig {
+    predicate isSource(DataFlow::Node source) {
+        source = Flask::FlaskApp::classRef().getReturn().asSource()
+    }
+  
+    predicate isSink(DataFlow::Node sink) {
+        sink = getGlobalNode("before_request")
+    }
+}
+module FlaskGlobalFlow = DataFlow::Global<FlaskGlobalConfiguration>;
+
+DataFlow::Node getNoAuthClassNode() {
+    exists(API::Node noAuthFlaskNode, API::Node noAuthBluePrintNode|
+        noAuthFlaskNode = Flask::FlaskApp::classRef().getReturn()
+        and noAuthBluePrintNode = Flask::Blueprint::classRef().getReturn()
+        and not exists(|FlaskGlobalFlow::flow(noAuthFlaskNode.asSource(), getGlobalNode("before_request")))
+        and not exists(|BlueprintGlobalRegisterFlow::flow(getGlobalNode("before_app_request"), noAuthFlaskNode.getMember("register_blueprint").getACall().getParameter(0, "blueprint").asSink()))
+        and not exists(|BlueprintPartFlow::flow(noAuthBluePrintNode.asSource(), getGlobalNode("before_request")))
+        and if exists(|BlueprintRegisterFlow::flow(noAuthBluePrintNode.asSource(), noAuthFlaskNode.getMember("register_blueprint").getACall().getParameter(0, "blueprint").asSink()))
+        then result = noAuthBluePrintNode.getMember("route").getACall()
+        else result = noAuthFlaskNode.getMember("route").getACall()
     )
 }
 
-predicate test3(Function routeFunc ) {
-    not exists(Function authFunc | 
-        routeFunc = authFunc
-    )
-}
 from Function routeFunc
 where exists(| 
-    routeFunc.getADecorator() = getRouteNode().asExpr() 
-
+    routeFunc.getADecorator() = getNoAuthClassNode().asExpr() 
 )
 select routeFunc
