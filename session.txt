@@ -1,0 +1,95 @@
+from flask import Flask, request, jsonify, session, redirect, url_for
+import hashlib
+import os
+
+app = Flask(__name__)
+app.secret_key = os.urandom(24)  # 设置 secret_key 用于 Flask 的会话管理
+
+# 哈希计算函数
+def calculate_hash(session_data):
+    """
+    根据传入的会话数据生成一个哈希值。
+    这里的 session_data 是一个字典，包含 session_id、ip、user_id、username、url 等信息。
+    """
+    session_string = f"{session_data['session_id']}|{session_data['ip']}|{session_data['user_id']}|{session_data['username']}|{session_data['url']}"
+    return hashlib.sha256(session_string.encode('utf-8')).hexdigest()
+
+# 创建模拟的会话存储（在实际应用中，可以使用数据库或缓存系统）
+session_store = {}
+
+@app.route('/')
+def home():
+    return '欢迎来到网站首页！'
+
+@app.route('/login', methods=['POST'])
+def login():
+    """
+    用户登录接口，登录成功后会生成 session_id，并将会话哈希值存储在会话中。
+    """
+    # 模拟用户登录（实际中应该使用数据库验证）
+    user_id = request.form['user_id']
+    username = request.form['username']
+    
+    # 模拟获取 session_id，通常由 Flask 自动管理
+    session_id = os.urandom(16).hex()
+    
+    # 获取客户端 IP 地址
+    ip = request.remote_addr
+    
+    # 获取请求的 URL
+    url = request.url
+    
+    # 创建会话数据
+    session_data = {
+        'session_id': session_id,
+        'ip': ip,
+        'user_id': user_id,
+        'username': username,
+        'url': url
+    }
+    
+    # 计算并保存会话哈希
+    session_hash = calculate_hash(session_data)
+    session['session_hash'] = session_hash  # 将哈希值存储在 Flask 会话中
+    
+    # 存储模拟的会话信息
+    session_store[session_id] = session_data
+    
+    return jsonify({"message": "登录成功", "session_hash": session_hash}), 200
+
+@app.route('/protected', methods=['GET'])
+def protected():
+    """
+    需要验证会话的接口，只有登录后才能访问。
+    """
+    # 获取当前会话的 session_hash
+    server_hash = session.get('session_hash')
+    
+    if not server_hash:
+        return jsonify({"message": "会话不存在或已过期"}), 401
+
+    # 获取当前的 session_id 和其它信息
+    session_data = session_store.get(session.get('session_id'))
+    
+    if not session_data:
+        return jsonify({"message": "会话信息无效"}), 401
+    
+    # 计算服务端存储的哈希值
+    server_hash_check = calculate_hash(session_data)
+    
+    # 如果哈希一致，表示会话有效
+    if server_hash == server_hash_check:
+        return jsonify({"message": "成功访问受保护的资源"}), 200
+    else:
+        return jsonify({"message": "会话存在篡改风险"}), 403
+
+@app.route('/logout', methods=['POST'])
+def logout():
+    """
+    用户登出接口，销毁会话哈希值，防止会话被篡改。
+    """
+    session.pop('session_hash', None)
+    return jsonify({"message": "登出成功"}), 200
+
+if __name__ == '__main__':
+    app.run(debug=True)
