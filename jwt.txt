@@ -1,0 +1,64 @@
+import time
+import jwt
+from jwt.exceptions import ExpiredSignatureError, InvalidIssuerError, InvalidTokenError
+
+# 假设你有以下一些配置：
+EXPECTED_ISSUER = "trusted_issuer"  # 期望的颁发方
+EXPECTED_CLIENT_ID = "trusted_client"  # 期望的客户端ID
+SECRET_KEY = "your_secret_key"  # 用于签名校验的密钥（HMAC模式）
+EXPECTED_ROLE = "admin"  # 期望的角色
+
+# 生成一个示例JWT（用于演示）
+def generate_jwt():
+    payload = {
+        "iss": EXPECTED_ISSUER,  # 颁发方
+        "exp": time.time() + 600,  # 设置过期时间，当前时间加10分钟
+        "roles": ["admin", "user"],  # 用户角色
+        "client_id": EXPECTED_CLIENT_ID  # 客户端ID
+    }
+    token = jwt.encode(payload, SECRET_KEY, algorithm="HS256")
+    return token
+
+# 校验JWT
+def validate_jwt(token):
+    try:
+        # 解码JWT并验证签名
+        payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"], options={"verify_exp": False})
+        
+        # 校验颁发方
+        if payload.get("iss") != EXPECTED_ISSUER:
+            raise InvalidIssuerError("Invalid issuer")
+        
+        # 校验过期时间
+        if payload.get("exp") < time.time():
+            raise ExpiredSignatureError("Token has expired")
+        
+        # 校验角色权限
+        if EXPECTED_ROLE not in payload.get("roles", []):
+            raise InvalidTokenError("Insufficient permissions")
+        
+        # 校验客户端信息
+        if payload.get("client_id") != EXPECTED_CLIENT_ID:
+            raise InvalidTokenError("Invalid client ID")
+        
+        print("JWT is valid!")
+        return payload
+
+    except ExpiredSignatureError:
+        print("Token has expired!")
+    except InvalidIssuerError:
+        print("Invalid issuer!")
+    except InvalidTokenError:
+        print("Invalid token or insufficient permissions!")
+    except Exception as e:
+        print(f"An error occurred during validation: {e}")
+
+# 示例：生成并校验JWT
+if __name__ == "__main__":
+    # 生成一个示例JWT
+    token = generate_jwt()
+    print(f"Generated Token: {token}")
+    
+    # 校验JWT
+    print("\nValidating JWT...")
+    validate_jwt(token)
