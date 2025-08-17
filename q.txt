@@ -1,0 +1,13 @@
+import java
+import semmle.code.java.dataflow.DataFlow
+import semmle.code.java.dataflow.FlowSources
+import semmle.code.java.frameworks.spring.SpringWeb
+
+from Class c, Annotation a, AnnotationType at
+where
+    a.getType() = at and
+    at.hasQualifiedName("javax.inject", "Named") and
+    c.getAnAnnotation() = a and
+    a.getValue("value").(StringLiteral).getValue() = "IDownload.Consumer"
+    
+select c.getAnAnnotation().getValue("code"),c.getAnAnnotation().getValue("desc")
