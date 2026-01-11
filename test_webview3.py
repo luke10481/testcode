@@ -1,4 +1,6 @@
 import webview
+import threading
+import time
 
 
 class Api:
@@ -28,7 +30,6 @@ html = """
             <td><img :src="item.image" width="50"></td>
         </tr>
     </table>
-    <button @click="refreshData">刷新数据</button>
 </div>
 <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
 <script>
@@ -42,16 +43,21 @@ createApp({
     },
     mounted() {
         this.loadData();
+        // 设置每2秒自动刷新数据
+        setInterval(() => {
+            this.loadData();
+        }, 500);
     },
     methods: {
         async loadData() {
             if (window.pywebview && window.pywebview.api) {
-                const data = await window.pywebview.api.get_data();
-                this.items = data;
+                try {
+                    const data = await window.pywebview.api.get_data();
+                    this.items = data;
+                } catch (error) {
+                    console.error('加载数据失败:', error);
+                }
             }
-        },
-        refreshData() {
-            this.loadData();
         }
     }
 }).mount('#app');
@@ -60,7 +66,7 @@ createApp({
 
 api = Api()
 window = webview.create_window(
-    '简单表格',
+    '自动刷新表格',
     html=html,
     width=700,
     height=400,
@@ -70,21 +76,30 @@ window = webview.create_window(
 
 # 示例：模拟Python端更新数据
 def update_from_python():
-    import time
-    time.sleep(2)  # 等待窗口加载
+    # 等待窗口加载
+    time.sleep(2)
 
-    # 模拟数据更新
-    new_data = [
+    # 第一次更新数据
+    new_data1 = [
         {"id": 1, "url": "www.google.com", "request": "GET", "image": "https://via.placeholder.com/50/00FF00"},
         {"id": 2, "url": "www.github.com", "request": "POST", "image": "https://via.placeholder.com/50/0000FF"}
     ]
-    api.update_data(new_data)
-    print("Python端数据已更新，点击前端的'刷新数据'按钮查看最新数据")
+    api.update_data(new_data1)
+    print("Python端数据已更新（第一次）")
+
+    # 再等几秒后进行第二次更新
+    time.sleep(5)
+
+    new_data2 = [
+        {"id": 1, "url": "www.python.org", "request": "GET", "image": "https://via.placeholder.com/50/FF00FF"},
+        {"id": 2, "url": "www.example.com", "request": "PUT", "image": "https://via.placeholder.com/50/FFFF00"},
+        {"id": 3, "url": "www.test.com", "request": "DELETE", "image": "https://via.placeholder.com/50/00FFFF"}
+    ]
+    api.update_data(new_data2)
+    print("Python端数据已更新（第二次）")
 
 
 # 在另一个线程中运行更新函数
-import threading
-
 threading.Thread(target=update_from_python, daemon=True).start()
 
 webview.start()
