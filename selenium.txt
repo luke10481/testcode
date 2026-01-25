@@ -1,0 +1,231 @@
+selenium抓包基本上没啥问题,但要获取页面内的所有xhr请求和响应信息,有两种方式:
+
+1. 使用selenium-ware
+##  Import webdriver from Selenium Wire instead of Selenium
+from seleniumwire import webdriver
+
+##  Get the URL
+driver = webdriver.Chrome("my/path/to/driver", options=options)
+driver.get("https://my.test.url.com")
+
+##  Print request headers
+for request in driver.requests:
+  print(request.url) # <--------------- Request url
+  print(request.headers) # <----------- Request headers
+  print(request.response.headers) # <-- Response headers
+selenium-ware本身是使用代理,通过代理去抓取, 如果抓取被墙的网站,我们本身就需要有过墙代理,因此就无效了(当然,我用的是调试模式,而非直接调起浏览器)
+
+2. 监听performance日志进行抓取
+1. selenium 4.10及以后版本写法
+from selenium import webdriver
+
+opts = webdriver.ChromeOptions()
+# 使用远程调试模式
+opts.add_experimental_option("debuggerAddress", "127.0.0.1:9224")
+# 监听performance,用于抓取日志
+opts.set_capability('goog:loggingPrefs', {"performance": "ALL"})
+
+driver = webdriver.Chrome(options=opts)
+2. selenium 4.9 及以前版本写法
+from selenium import webdriver
+from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
+
+opts = webdriver.ChromeOptions()
+# 使用远程调试模式
+opts.add_experimental_option("debuggerAddress", "127.0.0.1:9224")
+
+# 监听performance,用于抓取日志
+capabilities = DesiredCapabilities.CHROME
+capabilities["goog:loggingPrefs"] = {"performance": "ALL"}  # chromedriver 75+
+
+driver = webdriver.Chrome(options=opts, executable_path='./driver/chromedriver.exe', desired_capabilities=capabilities)
+3. 抓取分析日志
+# 必须等待一定的时间，不然会报错提示获取不到日志信息，因为需要等所有请求结束才能获取日志信息
+time.sleep(5)
+# 抓取 `performance` 日志
+performance_logs = driver.get_log("performance")
+for performance_log in performance_logs:
+    # performance_log内容: {"level": "INFO", message:"json字符串", "timestamp": 1694067123380}
+    message = json.loads(performance_log["message"])
+    # message内容: {"webview":"webview","message":{"method":"Network.requestWillBeSent","params":{}}}
+    message = message['message']
+    # 筛选事件: https://chromedevtools.github.io/devtools-protocol/tot/Network/
+    if message["method"] == 'Network.requestWillBeSent':
+        print("requestWillBeSent", json.dumps(message))
+        request_url = message['params']['request']['url']
+        request_header = dict(message['params']['request']['headers'])
+        request_postData = message['params']['request']['postData']
+
+    # 请求头
+    if message["method"] == 'Network.responseReceived':
+        print("responseReceived", json.dumps(message))
+        # 取值
+        request_id = message['params']['request_id'] 
+        # 获取响应  self.driver.execute_cdp_cmd('Network.getResponseBody', {'requestId': request_id})
+        response_url = message['params']['response']['url']
+        response_header = dict(message['params']['response']['headers'])
+image.png
+
+1. 关于Network.requestWillBeSent的响应,可以获取全params.request.headers,params.request.postData等
+
+{
+  "method": "Network.requestWillBeSent",
+  "params": {
+    "documentURL": "https://xxx",
+    "frameId": "251196AB9A5BEDC9341A99A57CC915F6",
+    "hasUserGesture": false,
+    "loaderId": "CA69255B31D27995DB9BD576F7A94B86",
+    "redirectHasExtraInfo": false,
+    "request": {
+      "hasPostData": true,
+      "headers": {
+        "Referer": "xxx",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36",
+        "authorization": "xxx",
+        "clienttype": "web",
+        "content-type": "application/json",
+        "csrftoken": "xxx",
+        "device-info": "xxx",
+        "fvideo-id": "xx",
+        "fvideo-token": "xxx",
+        "lang": "en"
+      },
+      "initialPriority": "High",
+      "isSameSite": false,
+      "method": "POST",
+      "mixedContentType": "none",
+      "postData": "{\"xxx\":\"xxx\"}",
+      "postDataEntries": [
+        {
+          "bytes": "xxx"
+        }
+      ],
+      "referrerPolicy": "origin-when-cross-origin",
+      "url": "https://xxx"
+    },
+    "requestId": "35984.147354",
+    "timestamp": 1191085.178422,
+    "type": "XHR",
+    "wallTime": 1694140898.136216
+  }
+}
+2. 关于Network.responseReceived的响应,可以获取响应头params.response.headers,耗时分析params.timing等
+
+{
+  "method": "Network.responseReceived",
+  "params": {
+    "frameId": "251196AB9A5BEDC9341A99A57CC915F6",
+    "hasExtraInfo": true,
+    "loaderId": "CA69255B31D27995DB9BD576F7A94B86",
+    "requestId": "35984.147342",
+    "response": {
+      "alternateProtocolUsage": "unspecifiedReason",
+      "connectionId": 1770974,
+      "connectionReused": true,
+      "encodedDataLength": 5967,
+      "fromDiskCache": false,
+      "fromPrefetchCache": false,
+      "fromServiceWorker": false,
+      "headers": {
+        "access-control-allow-origin": "*",
+        "content-encoding": "gzip",
+        "content-length": "5471",
+        "content-type": "application/json",
+        "date": "Fri, 08 Sep 2023 02:41:37 GMT",
+        "referrer-policy": "origin-when-cross-origin",
+        "server": "Tengine",
+        "strict-transport-security": "max-age=31536000; includeSubdomains",
+        "vary": "accept-encoding",
+        "via": "1.1 tesla, 1.1 4aed579d267267dd8aac916efed7b06e.cloudfront.net (CloudFront)",
+        "x-amz-cf-id": "7uVk40-XLYPZbA3vGTjTW9qRE55DoRUvnAkcovO7ztV1dZo19XFpzQ==",
+        "x-amz-cf-pop": "HKG62-C2",
+        "x-cache": "Miss from cloudfront",
+        "x-content-type-options": "nosniff",
+        "x-frame-options": "SAMEORIGIN",
+        "x-http2-stream-id": "5848471",
+        "x-http2-stream-weight": "16",
+        "x-xss-protection": "1; mode=block"
+      },
+      "mimeType": "application/json",
+      "protocol": "h2",
+      "responseTime": 1694140898023.462,
+      "securityDetails": {
+      },
+      "securityState": "secure",
+      "status": 200,
+      "statusText": "",
+      "timing": {
+        "connectEnd": -1,
+        "connectStart": -1,
+        "dnsEnd": -1,
+        "dnsStart": -1,
+        "proxyEnd": -1,
+        "proxyStart": -1,
+        "pushEnd": 0,
+        "pushStart": 0,
+        "receiveHeadersEnd": 265.017,
+        "receiveHeadersStart": 264.544,
+        "requestTime": 1191084.801407,
+        "sendEnd": 11.059,
+        "sendStart": 10.416,
+        "sslEnd": -1,
+        "sslStart": -1,
+        "workerFetchStart": -1,
+        "workerReady": -1,
+        "workerRespondWithSettled": -1,
+        "workerStart": -1
+      },
+      "url": "xxxx"
+    },
+    "timestamp": 1191085.183983,
+    "type": "XHR"
+  }
+}
+使用execute_cdp_cmd获取响应内容`response.body`
+上面的Network.responseReceived是无法直接获取到响应内容的,需要使用一种称为Chrome DevTools Protocol (简称"CDP") 的协议
+
+request_id = message['params']['requestId']  # 请参考前面
+resp = self.driver.execute_cdp_cmd('Network.getResponseBody', {'requestId': request_id})
+                    print("resp", resp)
+也可以筛选其他事件Events
+https://chromedevtools.github.io/devtools-protocol/tot/Network
+
+Network.eventSourceMessageReceived
+Network.loadingFailed
+Network.loadingFinished
+Network.requestServedFromCache
+Network.requestWillBeSent
+Network.responseReceived
+Network.webSocketClosed
+Network.webSocketCreated
+Network.webSocketFrameError
+Network.webSocketFrameReceived
+Network.webSocketFrameSent
+Network.webSocketHandshakeResponseReceived
+Network.webSocketWillSendHandshakeRequest
+Network.webTransportClosed
+Network.webTransportConnectionEstablished
+Network.webTransportCreated
+Network.reportingApiEndpointsChangedForOrigin EXPERIMENTAL
+Network.reportingApiReportAdded EXPERIMENTAL
+Network.reportingApiReportUpdated EXPERIMENTAL
+Network.requestWillBeSentExtraInfo EXPERIMENTAL
+Network.resourceChangedPriority EXPERIMENTAL
+Network.responseReceivedExtraInfo EXPERIMENTAL
+Network.signedExchangeReceived EXPERIMENTAL
+Network.subresourceWebBundleInnerResponseError EXPERIMENTAL
+Network.subresourceWebBundleInnerResponseParsed EXPERIMENTAL
+Network.subresourceWebBundleMetadataError EXPERIMENTAL
+Network.subresourceWebBundleMetadataReceived EXPERIMENTAL
+Network.trustTokenOperationDone EXPERIMENTAL
+Network.requestIntercepted EXPERIMENTALDEPRECATED
+
+解决方案
+您需要使用ChromeOptions实例，并将功能设置goog:loggingPrefs为{'performance': 'ALL'}。最简有效代码块如下：
+
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+
+options = Options()
+options.set_capability('goog:loggingPrefs', {'performance': 'ALL'})
+driver = Chrome(options=options)
